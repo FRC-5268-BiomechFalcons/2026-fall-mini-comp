@@ -2,11 +2,11 @@
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
+// NO QUEST, PIGEON TWO INSTEAD OF PIGEON ONE
 package frc.robot.subsystems;
 
 import com.ctre.phoenix.ErrorCode;
 import com.ctre.phoenix.sensors.PigeonIMU;
-import com.ctre.phoenix.sensors.PigeonIMU.PigeonState;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
@@ -16,7 +16,6 @@ import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -34,13 +33,9 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import frc.robot.Constants;
 import frc.robot.Constants.DriveConstants;
 import frc.robot.Constants.FieldConstants;
 import frc.robot.Constants.OIConstants;
-import frc.robot.Constants.QuestConstants;
-import gg.questnav.questnav.PoseFrame;
-import gg.questnav.questnav.QuestNav;
 
 
 public class DriveSubsystem extends SubsystemBase {
@@ -59,12 +54,6 @@ public class DriveSubsystem extends SubsystemBase {
 
     // Field Widget for the dashboard
     private Field2d field = new Field2d();
-
-    // Quest VR Headset 
-    QuestNav questNav = new QuestNav();
-
-    // Variable that tracks whether or not the quest has been resetted
-    boolean isResetting = false;
 
     Pose2d limelightEstimatedPosition = new Pose2d();
 
@@ -101,16 +90,6 @@ public class DriveSubsystem extends SubsystemBase {
                     new PIDConstants(2, 0.0, 0.0)),
                 getRobotConfig(), this::shouldFlipPath, this);
 
-        questNav.onCommandFailure((resp) -> SmartDashboard.putString("Quest Command Responses",
-                "Quest command failed " + resp));
-        questNav.onCommandSuccess((resp) -> SmartDashboard.putString("Quest Command Responses",
-                "Quest command succeeded " + resp));
-        questNav.onLowBattery(20, (resp) -> SmartDashboard.putString("Quest Command Responses",
-                "QUEST BATTERY LOW " + resp + "%"));
-        questNav.onTrackingAcquired(
-                () -> SmartDashboard.putString("Quest Command Responses", "Tracking Acquired"));
-        questNav.onTrackingLost(() -> SmartDashboard.putString("Quest Command Responses", "Tracking Lost!"));
-
         rotController = new PIDController(0.02, 0.0, 0.0);
         rotController.setTolerance(3.5);
         rotController.enableContinuousInput(-180, 180);
@@ -125,7 +104,6 @@ public class DriveSubsystem extends SubsystemBase {
                         m_rearLeft.getPosition(), m_rearRight.getPosition() });
 
         // VISION POSE TRACKING - QUEST + 2 LIMELIGHTS
-        questPoseTracking();
         limelightPoseTracking(shooterLimelight);
         limelightPoseTracking(leftLimelight);
 
@@ -147,36 +125,6 @@ public class DriveSubsystem extends SubsystemBase {
                 setHeading(getPose().getRotation().getDegrees());
             }
             gyroDebounceCounter = 0;
-        }
-
-    }
-
-    /**
-     * Updates the odometry's vision measurement using the quest's pose frames. 
-     * This should be called periodically.
-     * 
-     */
-    private void questPoseTracking() {
-        questNav.commandPeriodic();
-        SmartDashboard.putBoolean("Quest Connection Status", questNav.isConnected());
-        SmartDashboard.putString("Quest Percentage", questNav.getBatteryPercent().getAsInt() + "%");
-
-        if (!questNav.isConnected()) {
-            return;
-        }
-
-        PoseFrame[] newFrames = questNav.getAllUnreadPoseFrames();
-        for (PoseFrame frame : newFrames) {
-            if (frame.isTracking()) {
-                Pose3d rawPose = frame.questPose3d();
-                Pose2d robotPose2d = rawPose.transformBy(QuestConstants.ROBOT_TO_QUEST.inverse()).toPose2d();
-                // Add vision measurement to pose estimator
-                m_odometry.addVisionMeasurement(robotPose2d, // Measured pose
-                        frame.dataTimestamp(), // When measurement was taken
-                        VecBuilder.fill(0.08, 0.08, 0.035) // Standard deviations
-
-                );
-            }
         }
 
     }
@@ -293,18 +241,6 @@ public class DriveSubsystem extends SubsystemBase {
                 Rotation2d.fromDegrees(getHeading()), new SwerveModulePosition[] { m_frontLeft.getPosition(),
                         m_frontRight.getPosition(), m_rearLeft.getPosition(), m_rearRight.getPosition() },
                 pose);
-    }
-
-    /**
-     * Resets the quest's odometry. This should be called if you are resetting the robot's odometry.
-     * 
-     * @param pose The current Pose2d of the robot.
-     */
-    public void resetQuest(Pose2d pose) {
-        Pose3d pose3d = new Pose3d(pose);
-        questNav.setPose(pose3d.transformBy(Constants.QuestConstants.ROBOT_TO_QUEST));
-
-        isResetting = true;
     }
 
     /**

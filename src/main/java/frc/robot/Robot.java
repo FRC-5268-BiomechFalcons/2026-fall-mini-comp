@@ -8,8 +8,6 @@ import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.path.PathPlannerPath;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -103,7 +101,6 @@ public class Robot extends TimedRobot {
                 Pose2d startPose = path.getStartingHolonomicPose().get();
 
                 robotContainer.driveSubsystem.resetOdometry(startPose);
-                robotContainer.driveSubsystem.resetQuest(startPose);
 
             } catch (Exception e) {
                 e.printStackTrace();
