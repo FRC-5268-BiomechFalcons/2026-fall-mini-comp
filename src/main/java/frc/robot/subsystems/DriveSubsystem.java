@@ -5,8 +5,8 @@
 // NO QUEST, PIGEON TWO INSTEAD OF PIGEON ONE
 package frc.robot.subsystems;
 
-import com.ctre.phoenix.ErrorCode;
-import com.ctre.phoenix.sensors.PigeonIMU;
+import com.ctre.phoenix6.StatusCode;
+import com.ctre.phoenix6.hardware.Pigeon2;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
@@ -50,7 +50,7 @@ public class DriveSubsystem extends SubsystemBase {
         DriveConstants.kRearRightTurningCanId, DriveConstants.kBackRightChassisAngularOffset);
 
     // Pigeon IMU
-    private final PigeonIMU m_gyro = new PigeonIMU(25);
+    private final Pigeon2 m_gyro = new Pigeon2(25);
 
     // Field Widget for the dashboard
     private Field2d field = new Field2d();
@@ -115,9 +115,9 @@ public class DriveSubsystem extends SubsystemBase {
         SmartDashboard.putData(field);
         SmartDashboard.putNumber("Distance to Hub", getDistanceToHub());
         SmartDashboard.putNumber("Heading", getHeading());
-        SmartDashboard.putBoolean("Pigeon Comms", m_gyro.getLastError() == ErrorCode.OK);
+        SmartDashboard.putBoolean("Pigeon Comms", m_gyro.getYaw().getStatus() == StatusCode.OK);
 
-        boolean isGyroPresent = m_gyro.getLastError() == ErrorCode.OK;
+        boolean isGyroPresent = m_gyro.getYaw().getStatus() == StatusCode.OK;
         if (!isGyroPresent) {
             gyroDebounceCounter += 1;
         } else {
@@ -310,7 +310,7 @@ public class DriveSubsystem extends SubsystemBase {
 
     public void setHeading(double desiredHeadingDeg) {
         Rotation2d desiredHeading = Rotation2d.fromDegrees(desiredHeadingDeg);
-        Rotation2d currentYaw = Rotation2d.fromDegrees(m_gyro.getYaw());
+        Rotation2d currentYaw = Rotation2d.fromDegrees(m_gyro.getYaw().getValueAsDouble());
         gyroOffset = desiredHeading.minus(currentYaw).getDegrees();
     }
 
@@ -324,8 +324,8 @@ public class DriveSubsystem extends SubsystemBase {
         if (gyroDebounceCounter >= 3) {
             return m_odometry.getEstimatedPosition().getRotation().getDegrees();
         } else {
-            return Rotation2d.fromDegrees(gyroOffset).plus(Rotation2d.fromDegrees(m_gyro.getYaw()))
-                    .getDegrees();
+            return Rotation2d.fromDegrees(gyroOffset)
+                    .plus(Rotation2d.fromDegrees(m_gyro.getYaw().getValueAsDouble())).getDegrees();
         }
     }
 
@@ -360,10 +360,8 @@ public class DriveSubsystem extends SubsystemBase {
      * @return The turn rate of the robot, in degrees per second
      */
     public double getTurnRate() {
-        // return m_gyro.getRate(IMUAxis.kZ) * (DriveConstants.kGyroReversed ? -1.0 : 1.0);
-        double[] ypr = new double[3];
-        m_gyro.getRawGyro(ypr);
-        return ypr[0] * (DriveConstants.kGyroReversed ? -1.0 : 1.0);
+        return m_gyro.getAngularVelocityZWorld().getValueAsDouble() *
+            (DriveConstants.kGyroReversed ? -1.0 : 1.0);
     }
 
     /**
