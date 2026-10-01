@@ -4,12 +4,9 @@
 
 package frc.robot.subsystems;
 
-import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
-import com.ctre.phoenix6.configs.Slot0Configs;
-import com.ctre.phoenix6.controls.VelocityVoltage;
-import com.ctre.phoenix6.hardware.TalonFX;
 import com.revrobotics.AbsoluteEncoder;
 import com.revrobotics.PersistMode;
+import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkClosedLoopController;
@@ -25,15 +22,16 @@ import frc.robot.Constants.ModuleConstants;
 
 public class MAXSwerveModule {
 
-    // Drive Motors - Kraken
-    private final TalonFX m_drivingTalon;
-    private final Slot0Configs m_driveConfigs = new Slot0Configs();
+    // Drive Motors - NEO
+    private final SparkMax m_drivingSpark;
 
     // Turn Motors - NEO
     private final SparkMax m_turningSpark;
+
+    // Note: Since both the driving and turning motors are Spark Maxes, they need encoders.
+    private final RelativeEncoder m_drivingEncoder;
     private final AbsoluteEncoder m_turningEncoder;
     private final SparkClosedLoopController m_turningClosedLoopController;
-    private final CurrentLimitsConfigs currentLimits = new CurrentLimitsConfigs();
 
     private double m_chassisAngularOffset = 0;
     private SwerveModuleState m_desiredState = new SwerveModuleState(0.0, new Rotation2d());
@@ -41,37 +39,31 @@ public class MAXSwerveModule {
     /**
      * Constructs a MAXSwerveModule and configures the driving and turning motor,
      * encoder, and PID controller. This configuration is specific to the REV
-     * MAXSwerve Module built with NEO turn motors with SPARK MAXes, Kraken drive motors through TalonFX, and a Through Bore
+     * MAXSwerve Module built with NEO turn motors with SPARK MAXes, NEO drive motors w/ Spark Maxes, and a Through Bore
      * Encoder.
      */
     public MAXSwerveModule(int drivingCANId, int turningCANId, double chassisAngularOffset) {
-        m_drivingTalon = new TalonFX(drivingCANId);
 
+        m_drivingSpark = new SparkMax(drivingCANId, MotorType.kBrushless);
         m_turningSpark = new SparkMax(turningCANId, MotorType.kBrushless);
-        m_turningEncoder = m_turningSpark.getAbsoluteEncoder();
 
-        // Assigning PID Constants for the Kraken Drive motors, then applying them to the Kraken motor using Slot0Configs.
-        m_driveConfigs.kP = ModuleConstants.kPKrakenDrive;
-        m_driveConfigs.kI = ModuleConstants.kIKrakenDrive;
-        m_driveConfigs.kD = ModuleConstants.kDKrakenDrive;
-        m_drivingTalon.getConfigurator().apply(m_driveConfigs);
+        m_turningEncoder = m_turningSpark.getAbsoluteEncoder();
+        m_drivingEncoder = m_drivingSpark.getEncoder();
 
         // Configuring the NEO turn motors.
         m_turningClosedLoopController = m_turningSpark.getClosedLoopController();
 
-        currentLimits.SupplyCurrentLimit = 65;
-        currentLimits.SupplyCurrentLimitEnable = true;
-        m_drivingTalon.getConfigurator().apply(currentLimits);
-
         // Apply the respective configurations to the SPARKS. Reset parameters before
         // applying the configuration to bring the SPARK to a known good state. Persist
         // the settings to the SPARK to avoid losing them on a power cycle. This is applied only to the turning motor.
+        m_drivingSpark.configure(Configs.MAXSwerveModule.drivingConfig, ResetMode.kResetSafeParameters,
+                PersistMode.kPersistParameters);
         m_turningSpark.configure(Configs.MAXSwerveModule.turningConfig, ResetMode.kResetSafeParameters,
                 PersistMode.kPersistParameters);
 
         m_chassisAngularOffset = chassisAngularOffset;
         m_desiredState.angle = new Rotation2d(m_turningEncoder.getPosition());
-        m_drivingTalon.setPosition(0);
+        m_drivingEncoder.setPosition(0);
     }
 
     /**
@@ -80,7 +72,7 @@ public class MAXSwerveModule {
      * @return The current state of the module.
      */
     public SwerveModuleState getState() {
-        double motorRps = m_drivingTalon.getVelocity().getValueAsDouble();
+        double motorRps = m_drivingEncoder.getVelocity();
         double wheelRps = motorRps / ModuleConstants.kKrakenDriveGearRatio;
         double mps = wheelRps * ModuleConstants.kWheelCircumferenceMeters;
 
@@ -93,12 +85,12 @@ public class MAXSwerveModule {
      * @return The current position of the module.
      */
     public SwerveModulePosition getPosition() {
-        double motorRot = m_drivingTalon.getPosition().getValueAsDouble();
+        double motorRot = m_drivingEncoder.getVelocity();
         return new SwerveModulePosition(motorRotToMeters(motorRot), getTurningAngle());
     }
 
     public double getKrakenVelocity() {
-        return m_drivingTalon.getVelocity().getValueAsDouble() * (ModuleConstants.kWheelDiameterMeters / 2);
+        return m_drivingEncoder.getVelocity() * (ModuleConstants.kWheelDiameterMeters / 2);
     }
 
     /**
@@ -114,13 +106,8 @@ public class MAXSwerveModule {
         // Optimize the reference state to avoid spinning further than 90 degrees.
         corrected.optimize(Rotation2d.fromRadians(m_turningEncoder.getPosition()));
 
-        // Create a velocity control request for the drive motor. This is essentially the goal velocity we want the wheel to drive at.
-        VelocityVoltage request = new VelocityVoltage(0).withSlot(0);
-
-        // System.out.println(mpsToMotorRps(corrected.speedMetersPerSecond));
-
         // Set the motor's internal controller to drive at the goal velocity speed.
-        m_drivingTalon.setControl(request.withVelocity(mpsToMotorRps(corrected.speedMetersPerSecond)));
+        m_drivingSpark.set(corrected.speedMetersPerSecond);
 
         // Use position control to command the turning motor to go to the desired angle.
         m_turningClosedLoopController.setSetpoint(corrected.angle.getRadians(), ControlType.kPosition);
@@ -131,13 +118,7 @@ public class MAXSwerveModule {
 
     /** Zeroes all the SwerveModule encoders. */
     public void resetEncoders() {
-        m_drivingTalon.setPosition(0);
-    }
-
-    /** Converts m/s to motor rot/s */
-    private double mpsToMotorRps(double mps) {
-        double wheelRps = mps / ModuleConstants.kWheelCircumferenceMeters;
-        return wheelRps * ModuleConstants.kKrakenDriveGearRatio;
+        m_drivingEncoder.setPosition(0);
     }
 
     /**  */
