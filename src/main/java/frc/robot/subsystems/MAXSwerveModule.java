@@ -89,7 +89,7 @@ public class MAXSwerveModule {
         return new SwerveModulePosition(motorRotToMeters(motorRot), getTurningAngle());
     }
 
-    public double getKrakenVelocity() {
+    public double getNeoVelocity() {
         return m_drivingEncoder.getVelocity() * (ModuleConstants.kWheelDiameterMeters / 2);
     }
 
