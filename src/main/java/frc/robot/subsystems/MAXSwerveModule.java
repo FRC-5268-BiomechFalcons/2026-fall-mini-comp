@@ -85,7 +85,7 @@ public class MAXSwerveModule {
      * @return The current position of the module.
      */
     public SwerveModulePosition getPosition() {
-        double motorRot = m_drivingEncoder.getVelocity();
+        double motorRot = m_drivingEncoder.getPosition();
         return new SwerveModulePosition(motorRotToMeters(motorRot), getTurningAngle());
     }
 
