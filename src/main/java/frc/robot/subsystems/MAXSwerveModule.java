@@ -32,6 +32,7 @@ public class MAXSwerveModule {
     private final RelativeEncoder m_drivingEncoder;
     private final AbsoluteEncoder m_turningEncoder;
     private final SparkClosedLoopController m_turningClosedLoopController;
+    private final SparkClosedLoopController m_drivingClosedLoopController;
 
     private double m_chassisAngularOffset = 0;
     private SwerveModuleState m_desiredState = new SwerveModuleState(0.0, new Rotation2d());
@@ -52,6 +53,7 @@ public class MAXSwerveModule {
 
         // Configuring the NEO turn motors.
         m_turningClosedLoopController = m_turningSpark.getClosedLoopController();
+        m_drivingClosedLoopController = m_drivingSpark.getClosedLoopController();
 
         // Apply the respective configurations to the SPARKS. Reset parameters before
         // applying the configuration to bring the SPARK to a known good state. Persist
@@ -89,10 +91,6 @@ public class MAXSwerveModule {
         return new SwerveModulePosition(motorRotToMeters(motorRot), getTurningAngle());
     }
 
-    public double getNeoVelocity() {
-        return m_drivingEncoder.getVelocity() * (ModuleConstants.kWheelDiameterMeters / 2);
-    }
-
     /**
      * Sets the desired state for the module.
      *
@@ -107,7 +105,7 @@ public class MAXSwerveModule {
         corrected.optimize(Rotation2d.fromRadians(m_turningEncoder.getPosition()));
 
         // Set the motor's internal controller to drive at the goal velocity speed.
-        m_drivingSpark.set(corrected.speedMetersPerSecond);
+        m_drivingClosedLoopController.setSetpoint(corrected.speedMetersPerSecond, ControlType.kVelocity);
 
         // Use position control to command the turning motor to go to the desired angle.
         m_turningClosedLoopController.setSetpoint(corrected.angle.getRadians(), ControlType.kPosition);
