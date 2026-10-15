@@ -52,13 +52,13 @@ public final class Constants {
         //  DRIVETRAIN CAN IDs
         public static final int kFrontLeftDrivingCanId = 11;
         public static final int kRearLeftDrivingCanId = 13;
-        public static final int kFrontRightDrivingCanId = 15;
-        public static final int kRearRightDrivingCanId = 35;
+        public static final int kFrontRightDrivingCanId = 10;
+        public static final int kRearRightDrivingCanId = 2;
 
-        public static final int kFrontLeftTurningCanId = 10;
-        public static final int kRearLeftTurningCanId = 12;
-        public static final int kFrontRightTurningCanId = 14;
-        public static final int kRearRightTurningCanId = 16;
+        public static final int kFrontLeftTurningCanId = 4;
+        public static final int kRearLeftTurningCanId = 5;
+        public static final int kFrontRightTurningCanId = 3;
+        public static final int kRearRightTurningCanId = 6;
 
         public static final boolean kGyroReversed = false;
     }

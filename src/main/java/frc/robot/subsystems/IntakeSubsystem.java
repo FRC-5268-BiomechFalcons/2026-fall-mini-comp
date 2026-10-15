@@ -16,10 +16,10 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 public class IntakeSubsystem extends SubsystemBase {
 
     // Intake Motor
-    private final SparkMax intakeMotor = new SparkMax(9, MotorType.kBrushless);
+    private final SparkMax intakeMotor = new SparkMax(20, MotorType.kBrushless);
 
     // Indexer Motor
-    private final SparkMax indexerMotor = new SparkMax(8, MotorType.kBrushless);
+    private final SparkMax indexerMotor = new SparkMax(21, MotorType.kBrushless);
 
     // Belts in hopper
     private final PWMSparkMax hopperBelts = new PWMSparkMax(1);

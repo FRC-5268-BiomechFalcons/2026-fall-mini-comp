@@ -12,6 +12,15 @@ import com.ctre.phoenix6.controls.NeutralOut;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
+import com.revrobotics.AbsoluteEncoder;
+import com.revrobotics.ResetMode;
+import com.revrobotics.spark.SparkBase;
+import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.SparkBase.ControlType;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.config.SparkBaseConfig;
+import com.revrobotics.spark.config.SparkMaxConfig;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -25,26 +34,40 @@ public class ShooterSubsystem extends SubsystemBase {
     public static final double MIN_RPM = 0;
 
     // Shooter motor.
-    private final TalonFX shooterMotor = new TalonFX(7);
-    private final TalonFX shooterMotorFollower = new TalonFX(17);
+    private final SparkMax shooterMotor = new SparkMax(7, MotorType.kBrushless);
+    private final AbsoluteEncoder shooterEncoder;
+    private final SparkMax shooterMotorFollower = new SparkMax(17, MotorType.kBrushless);
 
     // Default RPM
     private double rpm = 3000;
 
     // Configuration for the shooter motor.
     private Slot0Configs slot0Configs = new Slot0Configs();
+    private SparkMaxConfig shooterConfig = new SparkMaxConfig();
+    private SparkMaxConfig shooterFollowerConfig = new SparkMaxConfig();
 
     /** Creates a new Shooter. */
     public ShooterSubsystem() {
         // Sets the FeedForward and PID for the shooter motor so that the RPM setpoint hits.
-        slot0Configs.kS = RobotConstants.shooterkS;
-        slot0Configs.kV = RobotConstants.shooterkV;
-        slot0Configs.kP = RobotConstants.shooterkP;
-        slot0Configs.kI = RobotConstants.shooterkI;
-        slot0Configs.kD = RobotConstants.shooterkD;
+        // slot0Configs.kS = RobotConstants.shooterkS;
+        // slot0Configs.kV = RobotConstants.shooterkV;
+        // slot0Configs.kP = RobotConstants.shooterkP;
+        // slot0Configs.kI = RobotConstants.shooterkI;
+        // slot0Configs.kD = RobotConstants.shooterkD;
 
-        shooterMotor.getConfigurator().apply(slot0Configs);
-        shooterMotorFollower.getConfigurator().apply(slot0Configs);
+        // shooterMotor.getConfigurator().apply(slot0Configs);
+        // shooterMotorFollower.getConfigurator().apply(slot0Configs);
+
+        shooterEncoder = shooterMotor.getAbsoluteEncoder();
+
+        shooterConfig.follow(shooterMotorFollower, true);
+        shooterConfig.idleMode(IdleMode.kCoast);
+
+        shooterFollowerConfig.follow(shooterMotor, false);
+        shooterFollowerConfig.idleMode(IdleMode.kCoast);
+
+        shooterMotor.configure(shooterConfig, ResetMode.kNoResetSafeParameters, null);
+        shooterMotorFollower.configure(shooterFollowerConfig, ResetMode.kNoResetSafeParameters, null);
     }
 
     @Override
@@ -58,7 +81,7 @@ public class ShooterSubsystem extends SubsystemBase {
      * @return double - The current shooter RPM 
      */
     public double getCurrentRPM() {
-        return shooterMotor.getVelocity().getValue().in(RPM);
+        return shooterEncoder.getVelocity();
     }
 
     /**
@@ -86,18 +109,16 @@ public class ShooterSubsystem extends SubsystemBase {
         double clampedGoal = MathUtil.clamp(rpm, MIN_RPM, MAX_RPM);
         double goalInRPS = clampedGoal / 60;
         VelocityVoltage request = new VelocityVoltage(0).withSlot(0);
-        shooterMotor.setControl(request.withVelocity(goalInRPS));
-        shooterMotorFollower
-                .setControl(new Follower(shooterMotor.getDeviceID(), MotorAlignmentValue.Opposed));
+
+        shooterMotor.getClosedLoopController().setSetpoint(goalInRPS, ControlType.kVelocity);
+
     }
 
     /**
      * Stops running the shooter.
      */
     public void stopControl() {
-        shooterMotor.setControl(new NeutralOut());
-        shooterMotorFollower
-                .setControl(new Follower(shooterMotor.getDeviceID(), MotorAlignmentValue.Opposed));
+        shooterMotor.set(0);
     }
 
     /**

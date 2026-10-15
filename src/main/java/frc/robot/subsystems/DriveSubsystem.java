@@ -103,9 +103,9 @@ public class DriveSubsystem extends SubsystemBase {
                 new SwerveModulePosition[] { m_frontLeft.getPosition(), m_frontRight.getPosition(),
                         m_rearLeft.getPosition(), m_rearRight.getPosition() });
 
-        // VISION POSE TRACKING - QUEST + 2 LIMELIGHTS
-        limelightPoseTracking(shooterLimelight);
-        limelightPoseTracking(leftLimelight);
+        // // VISION POSE TRACKING - QUEST + 2 LIMELIGHTS
+        // limelightPoseTracking(shooterLimelight);
+        // limelightPoseTracking(leftLimelight);
 
         // Update the field widget with our new pose
         field.setRobotPose(getPose());
