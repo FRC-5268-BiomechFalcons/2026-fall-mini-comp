@@ -160,17 +160,17 @@ public class RobotContainer {
         driverController.x().whileTrue(
                 new AutoRPM(shooterSubsystem, intakeSubsystem, driveSubsystem, sotfCalculator, 1, 0.02));
 
-        // Rumble notifier when shift changes occur. Move location in code later?
-        Trigger rumbleOnShift = new Trigger(() -> isShiftChanging());
-        rumbleOnShift.onChange(
-                new StartEndCommand(() -> driverController.setRumble(RumbleType.kBothRumble, 1), () -> {
-                    boolean isIntaking = CommandScheduler.getInstance().isScheduled(intakeCommand);
-                    if (isIntaking) {
-                        driverController.setRumble(RumbleType.kBothRumble, 0.5);
-                    } else {
-                        driverController.setRumble(RumbleType.kBothRumble, 0);
-                    }
-                }).withTimeout(0.5));
+        // // Rumble notifier when shift changes occur. Move location in code later?
+        // Trigger rumbleOnShift = new Trigger(() -> isShiftChanging());
+        // rumbleOnShift.onChange(
+        //         new StartEndCommand(() -> driverController.setRumble(RumbleType.kBothRumble, 1), () -> {
+        //             boolean isIntaking = CommandScheduler.getInstance().isScheduled(intakeCommand);
+        //             if (isIntaking) {
+        //                 driverController.setRumble(RumbleType.kBothRumble, 0.5);
+        //             } else {
+        //                 driverController.setRumble(RumbleType.kBothRumble, 0);
+        //             }
+        //         }).withTimeout(0.5));
     }
 
     /*
